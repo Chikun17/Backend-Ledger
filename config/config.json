@@ -1,14 +1,14 @@
 {
   "development": {
-    "url": "postgres://<DB_USER>:<DB_PASSWORD>@localhost:5432/<DB_NAME>",
+    "url": "postgres://krushnachandranayak@localhost:5432/backend_ledger",
     "dialect": "postgres"
   },
   "test": {
-    "url": "postgres://<DB_USER>:<DB_PASSWORD>@localhost:5432/<DB_NAME>_test",
+    "url": "postgres://krushnachandranayak@localhost:5432/backend_ledger_test",
     "dialect": "postgres"
   },
   "production": {
-    "url": "postgres://<DB_USER>:<DB_PASSWORD>@<HOST>:5432/<DB_NAME>",
+    "url": "postgres://krushnachandranayak@localhost:5432/backend_ledger",
     "dialect": "postgres"
   }
 }
