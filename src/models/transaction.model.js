@@ -1,43 +1,47 @@
-const mongoose = require("mongoose")
+// src/models/transaction.model.js
+const { DataTypes, Model } = require('sequelize');
+const { sequelize } = require('../config/db');
 
+class Transaction extends Model {}
 
-const transactionSchema = new mongoose.Schema({
-    fromAccount: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "account",
-        required: [ true, "Transaction must be associated with a from account" ],
-        index: true
+Transaction.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
     },
-    toAccount: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "account",
-        required: [ true, "Transaction must be associated with a to account" ],
-        index: true
+    fromAccountId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: { model: 'accounts', key: 'id' },
+    },
+    toAccountId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: { model: 'accounts', key: 'id' },
     },
     status: {
-        type: String,
-        enum: {
-            values: [ "PENDING", "COMPLETED", "FAILED", "REVERSED" ],
-            message: "Status can be either PENDING, COMPLETED, FAILED or REVERSED",
-        },
-        default: "PENDING"
+      type: DataTypes.ENUM('PENDING', 'COMPLETED', 'FAILED', 'REVERSED'),
+      defaultValue: 'PENDING',
     },
     amount: {
-        type: Number,
-        required: [ true, "Amount is required for creating a transaction" ],
-        min: [ 0, "Transaction amount cannot be negative" ]
+      type: DataTypes.DECIMAL,
+      allowNull: false,
+      validate: { min: 0 },
     },
     idempotencyKey: {
-        type: String,
-        required: [ true, "Idempotency Key is required for creating a transaction" ],
-        index: true,
-        unique: true
-    }
-}, {
-    timestamps: true
-})
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Transaction',
+    tableName: 'transactions',
+    timestamps: true,
+  }
+);
 
-const transactionModel = mongoose.model("transaction", transactionSchema)
-
-
-module.exports = transactionModel   
+module.exports = Transaction;

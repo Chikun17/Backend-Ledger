@@ -1,52 +1,45 @@
-const mongoose = require('mongoose');
+// src/models/ledger.model.js
+const { DataTypes, Model } = require('sequelize');
+const { sequelize } = require('../config/db');
 
+class Ledger extends Model {}
 
-const ledgerSchema = new mongoose.Schema({
-    account: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "account",
-        required: [ true, "Ledger must be associated with an account" ],
-        index: true,
-        immutable: true
+Ledger.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    accountId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: { model: 'accounts', key: 'id' },
     },
     amount: {
-        type: Number,
-        required: [ true, "Amount is required for creating a ledger entry" ],
-        immutable: true
+      type: DataTypes.DECIMAL,
+      allowNull: false,
     },
-    transaction: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "transaction",
-        required: [ true, "Ledger must be associated with a transaction" ],
-        index: true,
-        immutable: true
+    transactionId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: { model: 'transactions', key: 'id' },
     },
     type: {
-        type: String,
-        enum: {
-            values: [ "CREDIT", "DEBIT" ],
-            message: "Type can be either CREDIT or DEBIT",
-        },
-        required: [ true, "Ledger type is required" ],
-        immutable: true
-    }
-})
+      type: DataTypes.ENUM('CREDIT', 'DEBIT'),
+      allowNull: false,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Ledger',
+    tableName: 'ledgers',
+    timestamps: true,
+    hooks: {
+      beforeUpdate: () => { throw new Error('Ledger entries are immutable and cannot be modified'); },
+      beforeDestroy: () => { throw new Error('Ledger entries are immutable and cannot be deleted'); },
+    },
+  }
+);
 
-
-function preventLedgerModification() {
-    throw new Error("Ledger entries are immutable and cannot be modified or deleted");
-}
-
-ledgerSchema.pre('findOneAndUpdate', preventLedgerModification);
-ledgerSchema.pre('updateOne', preventLedgerModification);
-ledgerSchema.pre('deleteOne', preventLedgerModification);
-ledgerSchema.pre('remove', preventLedgerModification);
-ledgerSchema.pre('deleteMany', preventLedgerModification);
-ledgerSchema.pre('updateMany', preventLedgerModification);
-ledgerSchema.pre("findOneAndDelete", preventLedgerModification);
-ledgerSchema.pre("findOneAndReplace", preventLedgerModification);
-
-
-const ledgerModel = mongoose.model('ledger', ledgerSchema);
-
-module.exports = ledgerModel;
+module.exports = Ledger;

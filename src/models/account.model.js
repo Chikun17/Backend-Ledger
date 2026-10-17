@@ -1,78 +1,52 @@
-const mongoose = require("mongoose")
-const ledgerModel = require("./ledger.model")
+// src/models/account.model.js
+const { DataTypes, Model } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const accountSchema = new mongoose.Schema({
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "user",
-        required: [ true, "Account must be associated with a user" ],
-        index: true
-    },
-    status: {
-        type: String,
-        enum: {
-            values: [ "ACTIVE", "FROZEN", "CLOSED" ],
-            message: "Status can be either ACTIVE, FROZEN or CLOSED",
-        },
-        default: "ACTIVE"
-    },
-    currency: {
-        type: String,
-        required: [ true, "Currency is required for creating an account" ],
-        default: "INR"
-    }
-}, {
-    timestamps: true
-})
-
-accountSchema.index({ user: 1, status: 1 })
-
-accountSchema.methods.getBalance = async function () {
-
-    const balanceData = await ledgerModel.aggregate([
-        { $match: { account: this._id } },
-        {
-            $group: {
-                _id: null,
-                totalDebit: {
-                    $sum: {
-                        $cond: [
-                            { $eq: [ "$type", "DEBIT" ] },
-                            "$amount",
-                            0
-                        ]
-                    }
-                },
-                totalCredit: {
-                    $sum: {
-                        $cond: [
-                            { $eq: [ "$type", "CREDIT" ] },
-                            "$amount",
-                            0
-                        ]
-                    }
-                }
-            }
-        },
-        {
-            $project: {
-                _id: 0,
-                balance: { $subtract: [ "$totalCredit", "$totalDebit" ] }
-            }
-        }
-    ])
-
-    if (balanceData.length === 0) {
-        return 0
-    }
-
-    return balanceData[ 0 ].balance
-
+class Account extends Model {
+  async getBalance() {
+    const Ledger = require('./ledger.model');
+    const result = await Ledger.findAll({
+      where: { accountId: this.id },
+      attributes: [
+        [sequelize.fn('SUM', sequelize.literal(`CASE WHEN "type" = 'DEBIT' THEN amount ELSE 0 END`)), 'totalDebit'],
+        [sequelize.fn('SUM', sequelize.literal(`CASE WHEN "type" = 'CREDIT' THEN amount ELSE 0 END`)), 'totalCredit'],
+      ],
+      raw: true,
+    });
+    const { totalDebit = 0, totalCredit = 0 } = result[0] || {};
+    return Number(totalCredit) - Number(totalDebit);
+  }
 }
 
+Account.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: { model: 'users', key: 'id' },
+    },
+    status: {
+      type: DataTypes.ENUM('ACTIVE', 'FROZEN', 'CLOSED'),
+      defaultValue: 'ACTIVE',
+    },
+    currency: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'INR',
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Account',
+    tableName: 'accounts',
+    timestamps: true,
+    indexes: [{ fields: ['userId', 'status'] }],
+  }
+);
 
-const accountModel = mongoose.model("account", accountSchema)
-
-
-
-module.exports = accountModel
+module.exports = Account;

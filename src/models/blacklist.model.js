@@ -1,20 +1,33 @@
-const mongoose = require("mongoose");
+// src/models/blacklist.model.js
+const { DataTypes, Model } = require('sequelize');
+const { sequelize } = require('../config/db');
 
+class TokenBlacklist extends Model {}
 
-const tokenBlacklistSchema = new mongoose.Schema({
+TokenBlacklist.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     token: {
-        type: String,
-        required: [ true, "Token is required to blacklist" ],
-        unique: [ true, "Token is already blacklisted" ]
-    }
-}, {
-    timestamps: true
-})
+      type: DataTypes.STRING(500),
+      allowNull: false,
+      unique: true,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'TokenBlacklist',
+    tableName: 'token_blacklists',
+    timestamps: true,
+    updatedAt: false,
+  }
+);
 
-tokenBlacklistSchema.index({ createdAt: 1 }, {
-    expireAfterSeconds: 60 * 60 * 24 * 3 // 3 days
-})
-
-const tokenBlackListModel = mongoose.model("tokenBlackList", tokenBlacklistSchema);
-
-module.exports = tokenBlackListModel;
+module.exports = TokenBlacklist;
